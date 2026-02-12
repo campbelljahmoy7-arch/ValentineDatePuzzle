@@ -657,8 +657,10 @@
 
         // image as background, positioned so each piece shows its part
         el.style.backgroundImage = `url('${L.img}')`;
-        el.style.backgroundSize  = `${bgW}px ${bgH}px`;
-        el.style.backgroundPosition = `${-col * pieceSize}px ${-row * pieceSize}px`;
+         el.style.backgroundSize = "cover";
+         el.style.backgroundPosition =
+          `${-col * pieceSize}px ${-row * pieceSize}px`;
+
 
         // store metadata
         el.dataset.i = String(i);
@@ -982,3 +984,4 @@
   </script>
 </body>
 </html>
+
