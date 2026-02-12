@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Valentine Heart Puzzle 💘</title>
+  <style>
+    :root{
+      --bg1:#ffdde1;
+      --bg2:#ee9ca7;
+      --card:#ffffff;
+      --text:#2b2b2b;
+      --muted:#666;
+      --accent:#e63946;
+      --accent2:#ff4d6d;
+      --shadow: 0 20px 50px rgba(0,0,0,.18);
+      --pieceShadow: 0 10px 25px rgba(0,0,0,.22);
+      --boardShadow: 0 15px 40px rgba(0,0,0,.15);
+
+      --heartSvg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 87C20 70 7 54 7 36c0-12 9-21 21-21 9 0 16 5 22 13 6-8 13-13 22-13 12 0 21 9 21 21 0 18-13 34-43 51z'/%3E%3C/svg%3E");
+    }
+
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      min-height:100vh;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      overflow:hidden;
+    }
+
+    .app{
+      width: min(1200px, 96vw);
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr; width:min(980px, 98vw);}
+    }
+
+    .panel, .stage{
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.55);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .panel{
+      padding: 18px;
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+    .logo{
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: radial-gradient(circle at 30% 30%, #fff, #ffd1dc);
+      display:grid; place-items:center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+      font-size: 18px;
+    }
+    h1{
+      font-size: 18px;
+      margin: 0;
+      line-height: 1.1;
+    }
+    .sub{
+      margin:0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .card{
+      background: rgba(255,255,255,.95);
+      border: 1px solid rgba(0,0,0,.05);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    }
+
+    .row{
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 10px;
+    }
+
+    .pill{
+      font-size: 12px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(230,57,70,.12);
+      color: #b21f2d;
+      border: 1px solid rgba(230,57,70,.18);
+      white-space:nowrap;
+    }
+
+    .progressWrap{display:flex; flex-direction:column; gap: 8px;}
+    .progressBar{
+      height: 10px;
+      background: rgba(0,0,0,.07);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .progressBar > div{
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 999px;
+      transition: width .25s ease;
+    }
+    .small{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .btns{display:flex; gap: 10px; flex-wrap:wrap;}
+    button{
+      border: none;
+      outline: none;
+      padding: 12px 14px;
+      border-radius: 14px;
+      cursor:pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: transform .08s ease, filter .15s ease;
+      user-select:none;
+    }
+    button:active{transform: scale(.98);}
+    .primary{
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      box-shadow: 0 12px 30px rgba(230,57,70,.25);
+    }
+    .ghost{
+      background: rgba(0,0,0,.06);
+      color: #222;
+      border: 1px solid rgba(0,0,0,.06);
+    }
+
+    .hint{
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .hint strong{color:#222;}
+
+    .stage{
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      min-height: 680px;
+    }
+
+    .topbar{
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(0,0,0,.06);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .title2{
+      display:flex; flex-direction:column; gap: 2px;
+    }
+    .title2 .t{
+      font-size: 14px; font-weight: 800;
+    }
+    .title2 .m{
+      font-size: 12px; color: var(--muted);
+    }
+
+    .workspace{
+      position:relative;
+      flex:1;
+      display:grid;
+      grid-template-columns: 1fr 280px;
+      gap: 12px;
+      padding: 12px;
+      align-items:stretch;
+    }
+
+    @media (max-width: 980px){
+      .workspace{
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 240px;
+      }
+    }
+
+    .boardWrap{
+      background: rgba(255,255,255,.7);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 18px;
+      box-shadow: var(--boardShadow);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .tray{
+      background: rgba(255,255,255,.7);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 18px;
+      box-shadow: var(--boardShadow);
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .trayHead{
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(0,0,0,.06);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 8px;
+    }
+    .trayHead .label{
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .trayHead .mini{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .trayArea{
+      position:relative;
+      flex:1;
+      overflow:hidden;
+    }
+
+    .board{
+      position:absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.65), rgba(255,255,255,.15) 55%, rgba(255,255,255,.05));
+    }
+
+    .preview{
+      position:absolute;
+      inset: 0;
+      background-position: center;
+      background-size: cover;
+      opacity: .11;
+      filter: blur(.2px) saturate(1.1);
+      pointer-events:none;
+      transform: scale(1.02);
+    }
+
+    .piece{
+      position:absolute;
+      width: 80px; height: 80px; /* updated dynamically */
+      background-repeat:no-repeat;
+      background-size: cover; /* updated dynamically */
+      border-radius: 16px; /* just in case */
+      box-shadow: var(--pieceShadow);
+      cursor: grab;
+      touch-action: none;
+      user-select:none;
+
+      /* Heart shape mask */
+      -webkit-mask-image: var(--heartSvg);
+      -webkit-mask-size: 100% 100%;
+      -webkit-mask-repeat: no-repeat;
+      mask-image: var(--heartSvg);
+      mask-size: 100% 100%;
+      mask-repeat: no-repeat;
+
+      transition: transform .08s ease;
+    }
+    .piece:active{cursor: grabbing; transform: scale(1.02);}
+
+    .piece.locked{
+      cursor: default;
+      box-shadow: 0 10px 25px rgba(230,57,70,.18);
+      filter: saturate(1.05);
+    }
+
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      background: rgba(0,0,0,.35);
+      padding: 16px;
+    }
+    .modal{
+      width: min(560px, 92vw);
+      background: rgba(255,255,255,.94);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.65);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      text-align:center;
+    }
+    .modal h2{
+      margin: 6px 0 6px;
+      font-size: 22px;
+    }
+    .modal p{
+      margin: 0 0 14px;
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: 14px;
+    }
+    .modal .bigHeart{
+      font-size: 34px;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,.12));
+    }
+
+    .finalPhoto{
+      width: 100%;
+      border-radius: 18px;
+      overflow:hidden;
+      border: 1px solid rgba(0,0,0,.07);
+      margin-top: 12px;
+    }
+    .finalPhoto img{
+      width: 100%;
+      display:block;
+    }
+
+    .volume{
+      display:flex; align-items:center; gap: 10px;
+      margin-top: 10px;
+      justify-content:center;
+    }
+    input[type="range"]{
+      width: 180px;
+    }
+
+    .toast{
+      position:absolute;
+      left: 14px; bottom: 14px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 14px;
+      padding: 10px 12px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.15);
+      font-size: 13px;
+      color:#222;
+      opacity:0;
+      transform: translateY(8px);
+      transition: opacity .25s ease, transform .25s ease;
+      pointer-events:none;
+    }
+    .toast.show{opacity:1; transform: translateY(0);}
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="panel">
+      <div class="brand">
+        <div class="logo">💘</div>
+        <div>
+          <h1>Valentine Heart Puzzle</h1>
+          <p class="sub">3 levels • heart pieces • soft music</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="pill" id="levelPill">Level 1 / 3</div>
+          <div class="pill" id="piecesPill">25 pieces</div>
+        </div>
+        <div style="height:10px"></div>
+
+        <div class="progressWrap">
+          <div class="row">
+            <div class="small"><strong>Progress</strong></div>
+            <div class="small" id="progressText">0 / 25</div>
+          </div>
+          <div class="progressBar"><div id="progressFill"></div></div>
+          <div class="small" id="messageLine">Drag the hearts into place 💗</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="btns">
+          <button class="primary" id="startBtn">Start / Continue</button>
+          <button class="ghost" id="shuffleBtn">Shuffle</button>
+          <button class="ghost" id="peekBtn">Peek Image</button>
+          <button class="ghost" id="resetBtn">Reset Level</button>
+        </div>
+        <div class="volume">
+          <span class="small">🔈</span>
+          <input id="vol" type="range" min="0" max="1" step="0.01" value="0.18"/>
+          <span class="small" id="volLabel">18%</span>
+        </div>
+        <p class="hint" style="margin:10px 0 0;">
+          <strong>Tip:</strong> If pieces feel “too easy” to snap, I can tighten the snap distance.
+          If you want it harder, I can loosen the background preview too.
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="hint" style="margin:0;">
+          <strong>File setup:</strong><br/>
+          level1.jpg, level2.jpg, level3.jpg, music.mp3 in the same folder as this HTML.
+        </p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="topbar">
+        <div class="title2">
+          <div class="t" id="stageTitle">Level 1</div>
+          <div class="m" id="stageSub">25 heart pieces</div>
+        </div>
+        <div class="pill" id="timerPill">⏱️ 00:00</div>
+      </div>
+
+      <div class="workspace">
+        <div class="boardWrap" id="boardWrap">
+          <div class="board" id="board"></div>
+          <div class="preview" id="preview"></div>
+          <div class="toast" id="toast">Nice! 💘</div>
+        </div>
+
+        <div class="tray">
+          <div class="trayHead">
+            <div class="label">Pieces</div>
+            <div class="mini" id="trayMini">Drag from here</div>
+          </div>
+          <div class="trayArea" id="trayArea"></div>
+        </div>
+      </div>
+
+      <div class="overlay" id="overlay">
+        <div class="modal" id="modal">
+          <div class="bigHeart">💞</div>
+          <h2 id="modalTitle">Welcome, my love</h2>
+          <p id="modalText">
+            Three levels. Each one reveals a memory.
+            When you finish the last one… there’s a surprise.
+          </p>
+          <div class="btns" style="justify-content:center;">
+            <button class="primary" id="modalGo">Start Level 1</button>
+          </div>
+          <p class="small" style="margin-top:10px;">
+            Music will play softly after you press Start (browser rules).
+          </p>
+        </div>
+      </div>
+
+      <audio id="music" src="music.mp3" preload="auto" loop></audio>
+    </div>
+  </div>
+
+  <script>
+    // ---------- CONFIG ----------
+    const LEVELS = [
+      { name: "Level 1", pieces: 25, cols: 5,  rows: 5,  img: "level1.jpg", note: "First memory 💗" },
+      { name: "Level 2", pieces: 50, cols: 10, rows: 5,  img: "level2.jpg", note: "Beach love 🌊💘" },
+      { name: "Level 3", pieces: 100,cols: 10, rows: 10, img: "level3.jpg", note: "Final memory ✨❤️" },
+    ];
+
+    // Snap tolerance (px). Lower = harder, Higher = easier.
+    const SNAP_DISTANCE = 26;
+
+    // Random rotation for tray pieces (adds charm)
+    const MAX_ROT = 16;
+
+    // ---------- STATE ----------
+    let levelIndex = 0;
+    let lockedCount = 0;
+    let pieces = [];
+    let started = false;
+    let peekOn = false;
+
+    // timer
+    let timerInt = null;
+    let startTime = null;
+
+    // ---------- DOM ----------
+    const boardWrap = document.getElementById("boardWrap");
+    const board = document.getElementById("board");
+    const preview = document.getElementById("preview");
+    const trayArea = document.getElementById("trayArea");
+
+    const levelPill = document.getElementById("levelPill");
+    const piecesPill = document.getElementById("piecesPill");
+    const progressText = document.getElementById("progressText");
+    const progressFill = document.getElementById("progressFill");
+    const messageLine = document.getElementById("messageLine");
+
+    const stageTitle = document.getElementById("stageTitle");
+    const stageSub = document.getElementById("stageSub");
+    const timerPill = document.getElementById("timerPill");
+
+    const overlay = document.getElementById("overlay");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalText = document.getElementById("modalText");
+    const modalGo = document.getElementById("modalGo");
+
+    const startBtn = document.getElementById("startBtn");
+    const shuffleBtn = document.getElementById("shuffleBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const peekBtn = document.getElementById("peekBtn");
+
+    const toast = document.getElementById("toast");
+
+    const music = document.getElementById("music");
+    const vol = document.getElementById("vol");
+    const volLabel = document.getElementById("volLabel");
+
+    // ---------- HELPERS ----------
+    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+    const rand = (min,max)=>Math.random()*(max-min)+min;
+
+    function showToast(text){
+      toast.textContent = text;
+      toast.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=>toast.classList.remove("show"), 1100);
+    }
+
+    function fmtTime(ms){
+      const s = Math.floor(ms/1000);
+      const m = Math.floor(s/60);
+      const r = s%60;
+      return `${String(m).padStart(2,"0")}:${String(r).padStart(2,"0")}`;
+    }
+
+    function startTimer(){
+      stopTimer();
+      startTime = Date.now();
+      timerInt = setInterval(()=>{
+        timerPill.textContent = `⏱️ ${fmtTime(Date.now()-startTime)}`;
+      }, 250);
+    }
+    function stopTimer(){
+      if(timerInt){ clearInterval(timerInt); timerInt = null; }
+    }
+
+    function updateUI(){
+      const L = LEVELS[levelIndex];
+      levelPill.textContent = `Level ${levelIndex+1} / 3`;
+      piecesPill.textContent = `${L.pieces} pieces`;
+      stageTitle.textContent = L.name;
+      stageSub.textContent = `${L.pieces} heart pieces • ${L.note}`;
+      progressText.textContent = `${lockedCount} / ${L.pieces}`;
+      const pct = (lockedCount / L.pieces) * 100;
+      progressFill.style.width = `${pct}%`;
+
+      if(lockedCount === 0){
+        messageLine.textContent = "Drag the hearts into place 💗";
+      } else if(lockedCount < L.pieces){
+        messageLine.textContent = "Keep going… you’re almost there 💞";
+      } else {
+        messageLine.textContent = "Completed! 💘";
+      }
+    }
+
+    function setPreviewOpacity(on){
+      peekOn = on;
+      preview.style.opacity = on ? 0.45 : 0.11;
+      preview.style.filter = on ? "none" : "blur(.2px) saturate(1.1)";
+    }
+
+    function placeInTray(el){
+      const trayRect = trayArea.getBoundingClientRect();
+      const pW = el._w, pH = el._h;
+
+      const x = rand(10, Math.max(10, trayRect.width - pW - 10));
+      const y = rand(10, Math.max(10, trayRect.height - pH - 10));
+
+      el.style.left = `${x}px`;
+      el.style.top  = `${y}px`;
+      el.style.transform = `rotate(${rand(-MAX_ROT, MAX_ROT)}deg)`;
+    }
+
+    function placeRandomOnBoard(el){
+      const rect = boardWrap.getBoundingClientRect();
+      const pW = el._w, pH = el._h;
+      const x = rand(10, Math.max(10, rect.width - pW - 10));
+      const y = rand(10, Math.max(10, rect.height - pH - 10));
+      el.style.left = `${x}px`;
+      el.style.top  = `${y}px`;
+    }
+
+    // Converts pointer event position to boardWrap local coords
+    function toBoardCoords(clientX, clientY){
+      const rect = boardWrap.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    // ---------- CORE PUZZLE ----------
+    function clearLevel(){
+      pieces = [];
+      lockedCount = 0;
+      board.querySelectorAll(".piece").forEach(p=>p.remove());
+      trayArea.querySelectorAll(".piece").forEach(p=>p.remove());
+      stopTimer();
+      timerPill.textContent = "⏱️ 00:00";
+    }
+
+    function buildLevel(idx){
+      clearLevel();
+      const L = LEVELS[idx];
+
+      // Set preview background
+      preview.style.backgroundImage = `url('${L.img}')`;
+
+      // Board sizing logic:
+      // We keep boardWrap responsive; compute piece size based on available area.
+      const rect = boardWrap.getBoundingClientRect();
+      // Leave a little padding
+      const usableW = rect.width;
+      const usableH = rect.height;
+
+      // Piece size based on grid
+      // Hearts need some breathing room, so slightly smaller than cell size.
+      const cellW = usableW / L.cols;
+      const cellH = usableH / L.rows;
+      const baseSize = Math.floor(Math.min(cellW, cellH) * 0.92);
+
+      // We'll use same width/height for hearts; scale image accordingly
+      const pieceSize = clamp(baseSize, 38, 120);
+
+      // Background image size to match the board "grid"
+      const bgW = pieceSize * L.cols;
+      const bgH = pieceSize * L.rows;
+
+      // Center the puzzle "target" area within the board
+      const targetW = bgW;
+      const targetH = bgH;
+      const offsetX = (usableW - targetW) / 2;
+      const offsetY = (usableH - targetH) / 2;
+
+      // Create pieces
+      for(let i=0;i<L.pieces;i++){
+        const col = i % L.cols;
+        const row = Math.floor(i / L.cols);
+
+        const correctX = offsetX + col * pieceSize;
+        const correctY = offsetY + row * pieceSize;
+
+        const el = document.createElement("div");
+        el.className = "piece";
+        el.style.width = `${pieceSize}px`;
+        el.style.height = `${pieceSize}px`;
+
+        // image as background, positioned so each piece shows its part
+        el.style.backgroundImage = `url('${L.img}')`;
+        el.style.backgroundSize  = `${bgW}px ${bgH}px`;
+        el.style.backgroundPosition = `${-col * pieceSize}px ${-row * pieceSize}px`;
+
+        // store metadata
+        el.dataset.i = String(i);
+        el._correctX = correctX;
+        el._correctY = correctY;
+        el._w = pieceSize;
+        el._h = pieceSize;
+        el._locked = false;
+
+        // Start in tray
+        trayArea.appendChild(el);
+        placeInTray(el);
+
+        makeDraggable(el);
+
+        pieces.push(el);
+      }
+
+      updateUI();
+      setPreviewOpacity(false);
+
+      // Overlay copy
+      modalTitle.textContent = `${L.name} 💘`;
+      modalText.textContent = `Solve this one to reveal the memory. ${L.note}`;
+      modalGo.textContent = (idx === 0) ? "Start Level 1" : `Start ${L.name}`;
+      overlay.style.display = "grid";
+      started = false;
+    }
+
+    function makeDraggable(el){
+      let pointerId = null;
+      let startX=0, startY=0;
+      let originLeft=0, originTop=0;
+      let container = null; // boardWrap or trayArea
+
+      function getContainer(){
+        // pieces live either in trayArea or boardWrap
+        return el.parentElement === trayArea ? trayArea : boardWrap;
+      }
+
+      function onDown(e){
+        if(el._locked) return;
+        pointerId = e.pointerId;
+        el.setPointerCapture(pointerId);
+
+        container = getContainer();
+        const rect = container.getBoundingClientRect();
+
+        startX = e.clientX;
+        startY = e.clientY;
+
+        originLeft = parseFloat(el.style.left || "0");
+        originTop  = parseFloat(el.style.top  || "0");
+
+        // Bring to front
+        el.style.zIndex = 9999;
+        el.style.transform = `rotate(0deg) scale(1.02)`;
+      }
+
+      function onMove(e){
+        if(pointerId === null || e.pointerId !== pointerId) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        el.style.left = `${originLeft + dx}px`;
+        el.style.top  = `${originTop  + dy}px`;
+      }
+
+      function onUp(e){
+        if(pointerId === null || e.pointerId !== pointerId) return;
+
+        try{ el.releasePointerCapture(pointerId); }catch{}
+        pointerId = null;
+
+        // Determine if piece should be on board:
+        // If it was dragged over the boardWrap, we move it there.
+        const boardRect = boardWrap.getBoundingClientRect();
+        const inBoard =
+          e.clientX >= boardRect.left && e.clientX <= boardRect.right &&
+          e.clientY >= boardRect.top  && e.clientY <= boardRect.bottom;
+
+        if(inBoard && el.parentElement !== boardWrap){
+          // Convert current position from tray coords to board coords
+          const trayRect = trayArea.getBoundingClientRect();
+          const curLeft = parseFloat(el.style.left || "0");
+          const curTop  = parseFloat(el.style.top  || "0");
+
+          const absoluteX = trayRect.left + curLeft;
+          const absoluteY = trayRect.top  + curTop;
+
+          const bX = absoluteX - boardRect.left;
+          const bY = absoluteY - boardRect.top;
+
+          boardWrap.appendChild(el);
+          el.style.left = `${bX}px`;
+          el.style.top  = `${bY}px`;
+        }
+        else if(!inBoard && el.parentElement !== trayArea){
+          // Move back to tray
+          const curLeft = parseFloat(el.style.left || "0");
+          const curTop  = parseFloat(el.style.top  || "0");
+          const absX = boardRect.left + curLeft;
+          const absY = boardRect.top  + curTop;
+
+          const trayRect = trayArea.getBoundingClientRect();
+          const tX = absX - trayRect.left;
+          const tY = absY - trayRect.top;
+
+          trayArea.appendChild(el);
+          el.style.left = `${tX}px`;
+          el.style.top  = `${tY}px`;
+        }
+
+        // Restore a slight rotation if in tray
+        if(el.parentElement === trayArea){
+          el.style.transform = `rotate(${rand(-MAX_ROT, MAX_ROT)}deg)`;
+          el.style.zIndex = 1;
+          return;
+        }
+
+        // If on board, check snap
+        const left = parseFloat(el.style.left || "0");
+        const top  = parseFloat(el.style.top  || "0");
+
+        const dx = (left - el._correctX);
+        const dy = (top  - el._correctY);
+        const dist = Math.hypot(dx, dy);
+
+        if(dist <= SNAP_DISTANCE){
+          lockPiece(el);
+        }else{
+          el.style.transform = `rotate(0deg)`;
+          el.style.zIndex = 1;
+        }
+      }
+
+      el.addEventListener("pointerdown", onDown);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    }
+
+    function lockPiece(el){
+      if(el._locked) return;
+
+      el._locked = true;
+      el.classList.add("locked");
+      el.style.left = `${el._correctX}px`;
+      el.style.top  = `${el._correctY}px`;
+      el.style.transform = "rotate(0deg)";
+      el.style.zIndex = 2;
+
+      lockedCount++;
+      updateUI();
+
+      if(lockedCount % 6 === 0) showToast("Nice! 💘");
+
+      const L = LEVELS[levelIndex];
+      if(lockedCount === L.pieces){
+        onLevelComplete();
+      }
+    }
+
+    function shufflePieces(){
+      // Only shuffle unlocked pieces in tray (and also toss board pieces around a bit)
+      pieces.forEach(p=>{
+        if(p._locked) return;
+        if(p.parentElement === trayArea){
+          placeInTray(p);
+        }else{
+          placeRandomOnBoard(p);
+          p.style.transform = "rotate(0deg)";
+        }
+        p.style.zIndex = 1;
+      });
+      showToast("Shuffled 💞");
+    }
+
+    function resetLevel(){
+      const idx = levelIndex;
+      buildLevel(idx);
+      showToast("Reset 💗");
+    }
+
+    function onLevelComplete(){
+      stopTimer();
+      const timeTaken = startTime ? fmtTime(Date.now()-startTime) : "00:00";
+
+      const isLast = levelIndex === LEVELS.length - 1;
+
+      overlay.style.display = "grid";
+      modalTitle.textContent = isLast ? "You did it, my love 💍❤️" : "Level Complete 💞";
+      modalText.textContent = isLast
+        ? `You finished all 3 levels in ${timeTaken}. I love you. Now read the surprise below.`
+        : `Completed in ${timeTaken}. Ready for the next memory?`;
+
+      // Add final image + message if last level
+      const existing = document.querySelector(".finalPhoto");
+      if(existing) existing.remove();
+
+      if(isLast){
+        const wrap = document.createElement("div");
+        wrap.className = "finalPhoto";
+        wrap.innerHTML = `
+          <img src="level3.jpg" alt="Final memory"/>
+        `;
+        document.getElementById("modal").appendChild(wrap);
+
+        // Replace button
+        modalGo.textContent = "Open the Surprise 💖";
+        modalGo.onclick = () => {
+          overlay.style.display = "none";
+          showFinalSurprise();
+        };
+      } else {
+        modalGo.textContent = `Start ${LEVELS[levelIndex+1].name}`;
+        modalGo.onclick = () => {
+          overlay.style.display = "none";
+          levelIndex++;
+          buildLevel(levelIndex);
+          // start when they press start in overlay (we will also start music)
+          startGameplay();
+        };
+      }
+    }
+
+    function showFinalSurprise(){
+      // Full-screen surprise overlay
+      overlay.style.display = "grid";
+
+      // Replace modal content
+      const modal = document.getElementById("modal");
+      modal.innerHTML = `
+        <div class="bigHeart">💖</div>
+        <h2>Happy Valentine’s Day</h2>
+        <p>
+          You’re my favorite person, my peace, and my best memory.
+          <br/>Thank you for choosing me. Always.
+        </p>
+        <div class="finalPhoto">
+          <img src="level3.jpg" alt="Our memory"/>
+        </div>
+        <div class="btns" style="justify-content:center; margin-top:14px;">
+          <button class="primary" id="replayBtn">Replay from Level 1</button>
+          <button class="ghost" id="closeBtn">Close</button>
+        </div>
+        <p class="small" style="margin-top:10px;">(Music stays soft in the background)</p>
+      `;
+
+      document.getElementById("replayBtn").onclick = () => {
+        // restore modal template (quick rebuild)
+        location.reload();
+      };
+      document.getElementById("closeBtn").onclick = () => {
+        overlay.style.display = "none";
+      };
+    }
+
+    function startGameplay(){
+      if(started) return;
+      started = true;
+
+      // Music rules: must be triggered by user action
+      music.volume = parseFloat(vol.value);
+      music.play().catch(()=>{ /* ignore autoplay blocks */ });
+
+      startTimer();
+
+      // Hide overlay
+      overlay.style.display = "none";
+
+      showToast("Good luck 💘");
+    }
+
+    // ---------- EVENTS ----------
+    modalGo.addEventListener("click", ()=>{
+      // Start current level
+      startGameplay();
+    });
+
+    startBtn.addEventListener("click", ()=>{
+      startGameplay();
+    });
+
+    shuffleBtn.addEventListener("click", ()=>{
+      shufflePieces();
+    });
+
+    resetBtn.addEventListener("click", ()=>{
+      resetLevel();
+    });
+
+    peekBtn.addEventListener("click", ()=>{
+      setPreviewOpacity(!peekOn);
+      showToast(peekOn ? "Peek ON 👀" : "Peek OFF 💗");
+    });
+
+    vol.addEventListener("input", ()=>{
+      const v = parseFloat(vol.value);
+      music.volume = v;
+      volLabel.textContent = `${Math.round(v*100)}%`;
+    });
+
+    // Rebuild on resize (keeps proportions good)
+    let resizeT = null;
+    window.addEventListener("resize", ()=>{
+      clearTimeout(resizeT);
+      resizeT = setTimeout(()=>{
+        // preserve current level but restart layout (quick, stable)
+        buildLevel(levelIndex);
+      }, 180);
+    });
+
+    // ---------- INIT ----------
+    (function init(){
+      music.volume = parseFloat(vol.value);
+      volLabel.textContent = `${Math.round(parseFloat(vol.value)*100)}%`;
+
+      buildLevel(levelIndex);
+    })();
+  </script>
+</body>
+</html>
