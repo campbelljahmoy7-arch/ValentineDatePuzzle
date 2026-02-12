@@ -264,14 +264,12 @@
       position:absolute;
       width: 80px; height: 80px; /* updated dynamically */
       background-repeat:no-repeat;
-      background-size: cover; /* updated dynamically */
-      border-radius: 16px; /* just in case */
+
       box-shadow: var(--pieceShadow);
       cursor: grab;
       touch-action: none;
       user-select:none;
 
-      /* Heart shape mask */
       -webkit-mask-image: var(--heartSvg);
       -webkit-mask-size: 100% 100%;
       -webkit-mask-repeat: no-repeat;
@@ -280,8 +278,14 @@
       mask-repeat: no-repeat;
 
       transition: transform .08s ease;
+
+      /* prevent glitches / tearing */
+      backface-visibility: hidden;
+      transform: translateZ(0);
+      image-rendering: auto;
+      will-change: transform, left, top;
     }
-    .piece:active{cursor: grabbing; transform: scale(1.02);}
+    .piece:active{cursor: grabbing; transform: translateZ(0) scale(1.02);}
 
     .piece.locked{
       cursor: default;
@@ -402,8 +406,7 @@
           <span class="small" id="volLabel">18%</span>
         </div>
         <p class="hint" style="margin:10px 0 0;">
-          <strong>Tip:</strong> If pieces feel “too easy” to snap, I can tighten the snap distance.
-          If you want it harder, I can loosen the background preview too.
+          <strong>Tip:</strong> Drag hearts from the right tray into the left board 💘
         </p>
       </div>
 
@@ -472,7 +475,7 @@
     // Snap tolerance (px). Lower = harder, Higher = easier.
     const SNAP_DISTANCE = 26;
 
-    // Random rotation for tray pieces (adds charm)
+    // Random rotation for tray pieces
     const MAX_ROT = 16;
 
     // ---------- STATE ----------
@@ -581,7 +584,7 @@
 
       el.style.left = `${x}px`;
       el.style.top  = `${y}px`;
-      el.style.transform = `rotate(${rand(-MAX_ROT, MAX_ROT)}deg)`;
+      el.style.transform = `translateZ(0) rotate(${rand(-MAX_ROT, MAX_ROT)}deg)`;
     }
 
     function placeRandomOnBoard(el){
@@ -591,12 +594,6 @@
       const y = rand(10, Math.max(10, rect.height - pH - 10));
       el.style.left = `${x}px`;
       el.style.top  = `${y}px`;
-    }
-
-    // Converts pointer event position to boardWrap local coords
-    function toBoardCoords(clientX, clientY){
-      const rect = boardWrap.getBoundingClientRect();
-      return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
     // ---------- CORE PUZZLE ----------
@@ -616,33 +613,23 @@
       // Set preview background
       preview.style.backgroundImage = `url('${L.img}')`;
 
-      // Board sizing logic:
-      // We keep boardWrap responsive; compute piece size based on available area.
+      // compute sizes based on board
       const rect = boardWrap.getBoundingClientRect();
-      // Leave a little padding
       const usableW = rect.width;
       const usableH = rect.height;
 
-      // Piece size based on grid
-      // Hearts need some breathing room, so slightly smaller than cell size.
       const cellW = usableW / L.cols;
       const cellH = usableH / L.rows;
       const baseSize = Math.floor(Math.min(cellW, cellH) * 0.92);
-
-      // We'll use same width/height for hearts; scale image accordingly
       const pieceSize = clamp(baseSize, 38, 120);
 
-      // Background image size to match the board "grid"
-      const bgW = pieceSize * L.cols;
-      const bgH = pieceSize * L.rows;
+      // shared puzzle image space
+      const targetW = pieceSize * L.cols;
+      const targetH = pieceSize * L.rows;
 
-      // Center the puzzle "target" area within the board
-      const targetW = bgW;
-      const targetH = bgH;
       const offsetX = (usableW - targetW) / 2;
       const offsetY = (usableH - targetH) / 2;
 
-      // Create pieces
       for(let i=0;i<L.pieces;i++){
         const col = i % L.cols;
         const row = Math.floor(i / L.cols);
@@ -655,14 +642,12 @@
         el.style.width = `${pieceSize}px`;
         el.style.height = `${pieceSize}px`;
 
-        // image as background, positioned so each piece shows its part
         el.style.backgroundImage = `url('${L.img}')`;
-         el.style.backgroundSize = "cover";
-         el.style.backgroundPosition =
-          `${-col * pieceSize}px ${-row * pieceSize}px`;
 
+        // IMPORTANT: use shared sizing so pieces align correctly
+        el.style.backgroundSize = `${targetW}px ${targetH}px`;
+        el.style.backgroundPosition = `${-(col * pieceSize)}px ${-(row * pieceSize)}px`;
 
-        // store metadata
         el.dataset.i = String(i);
         el._correctX = correctX;
         el._correctY = correctY;
@@ -670,19 +655,16 @@
         el._h = pieceSize;
         el._locked = false;
 
-        // Start in tray
         trayArea.appendChild(el);
         placeInTray(el);
 
         makeDraggable(el);
-
         pieces.push(el);
       }
 
       updateUI();
       setPreviewOpacity(false);
 
-      // Overlay copy
       modalTitle.textContent = `${L.name} 💘`;
       modalText.textContent = `Solve this one to reveal the memory. ${L.note}`;
       modalGo.textContent = (idx === 0) ? "Start Level 1" : `Start ${L.name}`;
@@ -694,20 +676,11 @@
       let pointerId = null;
       let startX=0, startY=0;
       let originLeft=0, originTop=0;
-      let container = null; // boardWrap or trayArea
-
-      function getContainer(){
-        // pieces live either in trayArea or boardWrap
-        return el.parentElement === trayArea ? trayArea : boardWrap;
-      }
 
       function onDown(e){
         if(el._locked) return;
         pointerId = e.pointerId;
         el.setPointerCapture(pointerId);
-
-        container = getContainer();
-        const rect = container.getBoundingClientRect();
 
         startX = e.clientX;
         startY = e.clientY;
@@ -715,42 +688,34 @@
         originLeft = parseFloat(el.style.left || "0");
         originTop  = parseFloat(el.style.top  || "0");
 
-        // Bring to front
         el.style.zIndex = 9999;
-        el.style.transform = `rotate(0deg) scale(1.02)`;
+        el.style.transform = "translateZ(0) scale(1.02)";
       }
 
       function onMove(e){
         if(pointerId === null || e.pointerId !== pointerId) return;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-
         el.style.left = `${originLeft + dx}px`;
         el.style.top  = `${originTop  + dy}px`;
       }
 
       function onUp(e){
         if(pointerId === null || e.pointerId !== pointerId) return;
-
         try{ el.releasePointerCapture(pointerId); }catch{}
         pointerId = null;
 
-        // Determine if piece should be on board:
-        // If it was dragged over the boardWrap, we move it there.
         const boardRect = boardWrap.getBoundingClientRect();
         const inBoard =
           e.clientX >= boardRect.left && e.clientX <= boardRect.right &&
           e.clientY >= boardRect.top  && e.clientY <= boardRect.bottom;
 
         if(inBoard && el.parentElement !== boardWrap){
-          // Convert current position from tray coords to board coords
           const trayRect = trayArea.getBoundingClientRect();
           const curLeft = parseFloat(el.style.left || "0");
           const curTop  = parseFloat(el.style.top  || "0");
-
           const absoluteX = trayRect.left + curLeft;
           const absoluteY = trayRect.top  + curTop;
-
           const bX = absoluteX - boardRect.left;
           const bY = absoluteY - boardRect.top;
 
@@ -759,7 +724,6 @@
           el.style.top  = `${bY}px`;
         }
         else if(!inBoard && el.parentElement !== trayArea){
-          // Move back to tray
           const curLeft = parseFloat(el.style.left || "0");
           const curTop  = parseFloat(el.style.top  || "0");
           const absX = boardRect.left + curLeft;
@@ -774,17 +738,14 @@
           el.style.top  = `${tY}px`;
         }
 
-        // Restore a slight rotation if in tray
         if(el.parentElement === trayArea){
-          el.style.transform = `rotate(${rand(-MAX_ROT, MAX_ROT)}deg)`;
+          el.style.transform = `translateZ(0) rotate(${rand(-MAX_ROT, MAX_ROT)}deg)`;
           el.style.zIndex = 1;
           return;
         }
 
-        // If on board, check snap
         const left = parseFloat(el.style.left || "0");
         const top  = parseFloat(el.style.top  || "0");
-
         const dx = (left - el._correctX);
         const dy = (top  - el._correctY);
         const dist = Math.hypot(dx, dy);
@@ -792,7 +753,7 @@
         if(dist <= SNAP_DISTANCE){
           lockPiece(el);
         }else{
-          el.style.transform = `rotate(0deg)`;
+          el.style.transform = "translateZ(0)";
           el.style.zIndex = 1;
         }
       }
@@ -810,7 +771,7 @@
       el.classList.add("locked");
       el.style.left = `${el._correctX}px`;
       el.style.top  = `${el._correctY}px`;
-      el.style.transform = "rotate(0deg)";
+      el.style.transform = "translateZ(0)";
       el.style.zIndex = 2;
 
       lockedCount++;
@@ -825,14 +786,13 @@
     }
 
     function shufflePieces(){
-      // Only shuffle unlocked pieces in tray (and also toss board pieces around a bit)
       pieces.forEach(p=>{
         if(p._locked) return;
         if(p.parentElement === trayArea){
           placeInTray(p);
         }else{
           placeRandomOnBoard(p);
-          p.style.transform = "rotate(0deg)";
+          p.style.transform = "translateZ(0)";
         }
         p.style.zIndex = 1;
       });
@@ -840,15 +800,13 @@
     }
 
     function resetLevel(){
-      const idx = levelIndex;
-      buildLevel(idx);
+      buildLevel(levelIndex);
       showToast("Reset 💗");
     }
 
     function onLevelComplete(){
       stopTimer();
       const timeTaken = startTime ? fmtTime(Date.now()-startTime) : "00:00";
-
       const isLast = levelIndex === LEVELS.length - 1;
 
       overlay.style.display = "grid";
@@ -857,19 +815,15 @@
         ? `You finished all 3 levels in ${timeTaken}. I love you. Now read the surprise below.`
         : `Completed in ${timeTaken}. Ready for the next memory?`;
 
-      // Add final image + message if last level
       const existing = document.querySelector(".finalPhoto");
       if(existing) existing.remove();
 
       if(isLast){
         const wrap = document.createElement("div");
         wrap.className = "finalPhoto";
-        wrap.innerHTML = `
-          <img src="level3.jpg" alt="Final memory"/>
-        `;
+        wrap.innerHTML = `<img src="level3.jpg" alt="Final memory"/>`;
         document.getElementById("modal").appendChild(wrap);
 
-        // Replace button
         modalGo.textContent = "Open the Surprise 💖";
         modalGo.onclick = () => {
           overlay.style.display = "none";
@@ -881,17 +835,13 @@
           overlay.style.display = "none";
           levelIndex++;
           buildLevel(levelIndex);
-          // start when they press start in overlay (we will also start music)
           startGameplay();
         };
       }
     }
 
     function showFinalSurprise(){
-      // Full-screen surprise overlay
       overlay.style.display = "grid";
-
-      // Replace modal content
       const modal = document.getElementById("modal");
       modal.innerHTML = `
         <div class="bigHeart">💖</div>
@@ -910,49 +860,28 @@
         <p class="small" style="margin-top:10px;">(Music stays soft in the background)</p>
       `;
 
-      document.getElementById("replayBtn").onclick = () => {
-        // restore modal template (quick rebuild)
-        location.reload();
-      };
-      document.getElementById("closeBtn").onclick = () => {
-        overlay.style.display = "none";
-      };
+      document.getElementById("replayBtn").onclick = () => location.reload();
+      document.getElementById("closeBtn").onclick = () => { overlay.style.display = "none"; };
     }
 
     function startGameplay(){
       if(started) return;
       started = true;
 
-      // Music rules: must be triggered by user action
       music.volume = parseFloat(vol.value);
-      music.play().catch(()=>{ /* ignore autoplay blocks */ });
+      music.muted = false;
+      music.play().catch(()=>{});
 
       startTimer();
-
-      // Hide overlay
       overlay.style.display = "none";
-
       showToast("Good luck 💘");
     }
 
     // ---------- EVENTS ----------
-    modalGo.addEventListener("click", ()=>{
-      // Start current level
-      startGameplay();
-    });
-
-    startBtn.addEventListener("click", ()=>{
-      startGameplay();
-    });
-
-    shuffleBtn.addEventListener("click", ()=>{
-      shufflePieces();
-    });
-
-    resetBtn.addEventListener("click", ()=>{
-      resetLevel();
-    });
-
+    modalGo.addEventListener("click", ()=> startGameplay());
+    startBtn.addEventListener("click", ()=> startGameplay());
+    shuffleBtn.addEventListener("click", ()=> shufflePieces());
+    resetBtn.addEventListener("click", ()=> resetLevel());
     peekBtn.addEventListener("click", ()=>{
       setPreviewOpacity(!peekOn);
       showToast(peekOn ? "Peek ON 👀" : "Peek OFF 💗");
@@ -964,24 +893,20 @@
       volLabel.textContent = `${Math.round(v*100)}%`;
     });
 
-    // Rebuild on resize (keeps proportions good)
     let resizeT = null;
     window.addEventListener("resize", ()=>{
       clearTimeout(resizeT);
-      resizeT = setTimeout(()=>{
-        // preserve current level but restart layout (quick, stable)
-        buildLevel(levelIndex);
-      }, 180);
+      resizeT = setTimeout(()=> buildLevel(levelIndex), 180);
     });
 
-    // ---------- INIT ----------
     (function init(){
       music.volume = parseFloat(vol.value);
       volLabel.textContent = `${Math.round(parseFloat(vol.value)*100)}%`;
-
       buildLevel(levelIndex);
     })();
   </script>
 </body>
 </html>
+
+
 
