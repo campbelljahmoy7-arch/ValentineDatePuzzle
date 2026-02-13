@@ -292,7 +292,7 @@
       filter: saturate(1.05);
     }
 
-    /* ✅ Keep the look, just ensure modal is clickable */
+    /* Keep the look but ensure modal is clickable + on top */
     .overlay{
       position:absolute;
       inset:0;
@@ -488,9 +488,11 @@
     let timerInt = null;
     let startTime = null;
 
+    // ✅ prevents double-advance / desync
+    let transitioning = false;
+
     // ---------- DOM ----------
     const boardWrap = document.getElementById("boardWrap");
-    const board = document.getElementById("board");
     const preview = document.getElementById("preview");
     const trayArea = document.getElementById("trayArea");
 
@@ -515,7 +517,6 @@
     const peekBtn = document.getElementById("peekBtn");
 
     const toast = document.getElementById("toast");
-
     const music = document.getElementById("music");
     const vol = document.getElementById("vol");
     const volLabel = document.getElementById("volLabel");
@@ -556,8 +557,7 @@
       stageTitle.textContent = L.name;
       stageSub.textContent = `${L.pieces} heart pieces • ${L.note}`;
       progressText.textContent = `${lockedCount} / ${L.pieces}`;
-      const pct = (lockedCount / L.pieces) * 100;
-      progressFill.style.width = `${pct}%`;
+      progressFill.style.width = `${(lockedCount / L.pieces) * 100}%`;
 
       if(lockedCount === 0){
         messageLine.textContent = "Drag the hearts into place 💗";
@@ -599,15 +599,18 @@
     function clearLevel(){
       pieces = [];
       lockedCount = 0;
-      board.querySelectorAll(".piece").forEach(p=>p.remove());
+      boardWrap.querySelectorAll(".piece").forEach(p=>p.remove());
       trayArea.querySelectorAll(".piece").forEach(p=>p.remove());
       stopTimer();
       timerPill.textContent = "⏱️ 00:00";
     }
 
+    // ✅ SINGLE SOURCE OF TRUTH: buildLevel sets levelIndex so UI never desyncs
     function buildLevel(idx){
+      levelIndex = idx;
       clearLevel();
-      const L = LEVELS[idx];
+
+      const L = LEVELS[levelIndex];
 
       preview.style.backgroundImage = `url('${L.img}')`;
 
@@ -618,15 +621,15 @@
       const cellW = usableW / L.cols;
       const cellH = usableH / L.rows;
       const baseSize = Math.floor(Math.min(cellW, cellH) * 0.92);
-      const pieceSize = clamp(baseSize, 38, 120);
+      const pieceSize = clamp(baseSize, 34, 140);
 
       const targetW = pieceSize * L.cols;
       const targetH = pieceSize * L.rows;
 
-      const offsetX = (usableW - targetW) / 2;
-      const offsetY = (usableH - targetH) / 2;
+      const offsetX = Math.floor((usableW - targetW) / 2);
+      const offsetY = Math.floor((usableH - targetH) / 2);
 
-      // ✅ Preview matches the puzzle exactly
+      // Preview matches puzzle
       preview.style.backgroundSize = `${targetW}px ${targetH}px`;
       preview.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
       preview.style.backgroundRepeat = "no-repeat";
@@ -663,11 +666,17 @@
       updateUI();
       setPreviewOpacity(false);
 
+      // reset started for this level
+      started = false;
+      transitioning = false;
+
       modalTitle.textContent = `${L.name} 💘`;
       modalText.textContent = `Solve this one to reveal the memory. ${L.note}`;
-      modalGo.textContent = (idx === 0) ? "Start Level 1" : `Start ${L.name}`;
+      modalGo.textContent = (levelIndex === 0) ? "Start Level 1" : `Start ${L.name}`;
       overlay.style.display = "grid";
-      started = false;
+
+      // pieces should be clickable when not in modal
+      pieces.forEach(p => p.style.pointerEvents = "auto");
     }
 
     function makeDraggable(el){
@@ -677,6 +686,7 @@
 
       function onDown(e){
         if(el._locked) return;
+        if(overlay.style.display !== "none") return; // don't drag while modal is open
         pointerId = e.pointerId;
         el.setPointerCapture(pointerId);
 
@@ -744,9 +754,7 @@
 
         const left = parseFloat(el.style.left || "0");
         const top  = parseFloat(el.style.top  || "0");
-        const dx = (left - el._correctX);
-        const dy = (top  - el._correctY);
-        const dist = Math.hypot(dx, dy);
+        const dist = Math.hypot(left - el._correctX, top - el._correctY);
 
         if(dist <= SNAP_DISTANCE){
           lockPiece(el);
@@ -802,13 +810,16 @@
       showToast("Reset 💗");
     }
 
-    // ✅ Smooth level progression + clickable modal button (no issues)
+    // ✅ Smooth progression + no desync
     function onLevelComplete(){
+      if(transitioning) return;
+      transitioning = true;
+
       stopTimer();
       const timeTaken = startTime ? fmtTime(Date.now()-startTime) : "00:00";
       const isLast = levelIndex === LEVELS.length - 1;
 
-      // stop pieces from stealing clicks while modal is open
+      // Stop pieces from stealing clicks
       pieces.forEach(p => p.style.pointerEvents = "none");
 
       overlay.style.display = "grid";
@@ -817,11 +828,9 @@
         ? `You finished all 3 levels in ${timeTaken}. I love you. Now read the surprise below.`
         : `Completed in ${timeTaken}. Ready for the next memory?`;
 
-      // remove any previous final photo if present
       const existing = document.querySelector(".finalPhoto");
       if(existing) existing.remove();
 
-      // clear old handler
       modalGo.onclick = null;
 
       if(isLast){
@@ -835,15 +844,16 @@
           pieces.forEach(p => p.style.pointerEvents = "auto");
           overlay.style.display = "none";
           showFinalSurprise();
+          transitioning = false;
         };
       } else {
         modalGo.textContent = `Start ${LEVELS[levelIndex + 1].name}`;
         modalGo.onclick = () => {
           pieces.forEach(p => p.style.pointerEvents = "auto");
           overlay.style.display = "none";
-          levelIndex++;
-          buildLevel(levelIndex);
-          startGameplay(); // smooth like level 1
+          buildLevel(levelIndex + 1);   // ✅ no manual levelIndex++ here
+          startGameplay();
+          transitioning = false;
         };
       }
     }
@@ -882,13 +892,12 @@
 
       startTimer();
       overlay.style.display = "none";
+      pieces.forEach(p => p.style.pointerEvents = "auto");
       showToast("Good luck 💘");
     }
 
     // ---------- EVENTS ----------
-    // ✅ Single handler only (no conflicts)
     modalGo.onclick = () => startGameplay();
-
     startBtn.addEventListener("click", ()=> startGameplay());
     shuffleBtn.addEventListener("click", ()=> shufflePieces());
     resetBtn.addEventListener("click", ()=> resetLevel());
@@ -912,11 +921,12 @@
     (function init(){
       music.volume = parseFloat(vol.value);
       volLabel.textContent = `${Math.round(parseFloat(vol.value)*100)}%`;
-      buildLevel(levelIndex);
+      buildLevel(0);
     })();
   </script>
 </body>
 </html>
+
 
 
 
