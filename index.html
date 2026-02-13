@@ -252,8 +252,9 @@
     .preview{
       position:absolute;
       inset: 0;
-      background-position: center;
-      background-size: cover;
+      background-position: 0 0;
+background-size: 100% 100%;
+
       opacity: .11;
       filter: blur(.2px) saturate(1.1);
       pointer-events:none;
@@ -630,6 +631,12 @@
       const offsetX = (usableW - targetW) / 2;
       const offsetY = (usableH - targetH) / 2;
 
+      // Make the faded preview match the exact puzzle slicing
+preview.style.backgroundSize = `${targetW}px ${targetH}px`;
+preview.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
+preview.style.backgroundRepeat = "no-repeat";
+
+
       for(let i=0;i<L.pieces;i++){
         const col = i % L.cols;
         const row = Math.floor(i / L.cols);
@@ -907,6 +914,7 @@
   </script>
 </body>
 </html>
+
 
 
 
