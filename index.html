@@ -376,7 +376,7 @@
         <div class="logo">💘</div>
         <div>
           <h1>Valentine Heart Puzzle</h1>
-          <p class="sub">3 levels • heart pieces • soft music</p>
+          <p class="sub">3 levels • heart pieces </p>
         </div>
       </div>
 
@@ -416,8 +416,7 @@
 
       <div class="card">
         <p class="hint" style="margin:0;">
-          <strong>File setup:</strong><br/>
-          level1.jpg, level2.jpg, level3.jpg, music.mp3 in the same folder as this HTML.
+        
         </p>
       </div>
     </div>
@@ -450,7 +449,7 @@
       <div class="overlay" id="overlay">
         <div class="modal" id="modal">
           <div class="bigHeart">💞</div>
-          <h2 id="modalTitle">Welcome, my love</h2>
+          <h2 id="modalTitle">Welcome, babygirl</h2>
           <p id="modalText">
             Three levels. Each one reveals a memory.
             When you finish the last one… there’s a surprise.
@@ -459,7 +458,7 @@
             <button class="primary" id="modalGo">Start Level 1</button>
           </div>
           <p class="small" style="margin-top:10px;">
-            Music will play softly after you press Start (browser rules).
+            
           </p>
         </div>
       </div>
@@ -471,9 +470,9 @@
   <script>
     // ---------- CONFIG ----------
     const LEVELS = [
-      { name: "Level 1", pieces: 25, cols: 5,  rows: 5,  img: "level1.jpg", note: "First memory 💗" },
+      { name: "Level 1", pieces: 25, cols: 5,  rows: 5,  img: "level1.jpg", note: "Picnic Date💗" },
       { name: "Level 2", pieces: 50, cols: 10, rows: 5,  img: "level2.jpg", note: "Beach love 🌊💘" },
-      { name: "Level 3", pieces: 100,cols: 10, rows: 10, img: "level3.jpg", note: "Final memory ✨❤️" },
+      { name: "Level 3", pieces: 100,cols: 10, rows: 10, img: "level3.jpg", note: "Stage show and bayy tingz✨❤️" },
     ];
 
     const SNAP_DISTANCE = 26;
@@ -562,7 +561,7 @@
       if(lockedCount === 0){
         messageLine.textContent = "Drag the hearts into place 💗";
       } else if(lockedCount < L.pieces){
-        messageLine.textContent = "Keep going… you’re almost there 💞";
+        messageLine.textContent = "Keep going mama, you’re almost there 💞";
       } else {
         messageLine.textContent = "Completed! 💘";
       }
@@ -823,9 +822,9 @@
       pieces.forEach(p => p.style.pointerEvents = "none");
 
       overlay.style.display = "grid";
-      modalTitle.textContent = isLast ? "You did it, my love 💍❤️" : "Level Complete 💞";
+      modalTitle.textContent = isLast ? "You did it, my love!! ❤️" : "Level Complete 💞";
       modalText.textContent = isLast
-        ? `You finished all 3 levels in ${timeTaken}. I love you. Now read the surprise below.`
+        ? `You finished all 3 levels in ${timeTaken}. I love you soooo much. Now read the surprise below.`
         : `Completed in ${timeTaken}. Ready for the next memory?`;
 
       const existing = document.querySelector(".finalPhoto");
@@ -839,7 +838,7 @@
         wrap.innerHTML = `<img src="${LEVELS[levelIndex].img}" alt="Final memory"/>`;
         document.getElementById("modal").appendChild(wrap);
 
-        modalGo.textContent = "Open the Surprise 💖";
+        modalGo.textContent = "Open di Surprise 💖";
         modalGo.onclick = () => {
           pieces.forEach(p => p.style.pointerEvents = "auto");
           overlay.style.display = "none";
@@ -865,8 +864,13 @@
         <div class="bigHeart">💖</div>
         <h2>Happy Valentine’s Day</h2>
         <p>
-          You’re my favorite person, my peace, and my best memory.
-          <br/>Thank you for choosing me. Always.
+          This puzzle was only three levels…
+but our love story has no limit.
+
+  <br/>More dates.
+  <br/>More laughs.
+  <br/>More memories.
+  <br/>More us. 💞
         </p>
         <div class="finalPhoto">
           <img src="level3.jpg" alt="Our memory"/>
@@ -926,6 +930,7 @@
   </script>
 </body>
 </html>
+
 
 
 
