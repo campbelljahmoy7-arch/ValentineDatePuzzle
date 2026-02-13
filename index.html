@@ -252,20 +252,19 @@
     .preview{
       position:absolute;
       inset: 0;
-      background-position: 0 0;
-background-size: 100% 100%;
-
       opacity: .11;
       filter: blur(.2px) saturate(1.1);
       pointer-events:none;
       transform: scale(1.02);
+      background-repeat: no-repeat;
+      background-position: 0 0;
+      background-size: 100% 100%;
     }
 
     .piece{
       position:absolute;
       width: 80px; height: 80px; /* updated dynamically */
       background-repeat:no-repeat;
-
       box-shadow: var(--pieceShadow);
       cursor: grab;
       touch-action: none;
@@ -280,7 +279,6 @@ background-size: 100% 100%;
 
       transition: transform .08s ease;
 
-      /* prevent glitches / tearing */
       backface-visibility: hidden;
       transform: translateZ(0);
       image-rendering: auto;
@@ -294,6 +292,7 @@ background-size: 100% 100%;
       filter: saturate(1.05);
     }
 
+    /* ✅ Keep the look, just ensure modal is clickable */
     .overlay{
       position:absolute;
       inset:0;
@@ -301,6 +300,8 @@ background-size: 100% 100%;
       place-items:center;
       background: rgba(0,0,0,.35);
       padding: 16px;
+      z-index: 10000;
+      pointer-events: auto;
     }
     .modal{
       width: min(560px, 92vw);
@@ -310,6 +311,8 @@ background-size: 100% 100%;
       box-shadow: var(--shadow);
       padding: 18px;
       text-align:center;
+      position: relative;
+      z-index: 10001;
     }
     .modal h2{
       margin: 6px 0 6px;
@@ -473,20 +476,15 @@ background-size: 100% 100%;
       { name: "Level 3", pieces: 100,cols: 10, rows: 10, img: "level3.jpg", note: "Final memory ✨❤️" },
     ];
 
-    // Snap tolerance (px). Lower = harder, Higher = easier.
     const SNAP_DISTANCE = 26;
-
-    // Random rotation for tray pieces
     const MAX_ROT = 16;
 
-    // ---------- STATE ----------
     let levelIndex = 0;
     let lockedCount = 0;
     let pieces = [];
     let started = false;
     let peekOn = false;
 
-    // timer
     let timerInt = null;
     let startTime = null;
 
@@ -597,7 +595,7 @@ background-size: 100% 100%;
       el.style.top  = `${y}px`;
     }
 
-    // ---------- CORE PUZZLE ----------
+    // ---------- CORE ----------
     function clearLevel(){
       pieces = [];
       lockedCount = 0;
@@ -611,10 +609,8 @@ background-size: 100% 100%;
       clearLevel();
       const L = LEVELS[idx];
 
-      // Set preview background
       preview.style.backgroundImage = `url('${L.img}')`;
 
-      // compute sizes based on board
       const rect = boardWrap.getBoundingClientRect();
       const usableW = rect.width;
       const usableH = rect.height;
@@ -624,18 +620,16 @@ background-size: 100% 100%;
       const baseSize = Math.floor(Math.min(cellW, cellH) * 0.92);
       const pieceSize = clamp(baseSize, 38, 120);
 
-      // shared puzzle image space
       const targetW = pieceSize * L.cols;
       const targetH = pieceSize * L.rows;
 
       const offsetX = (usableW - targetW) / 2;
       const offsetY = (usableH - targetH) / 2;
 
-      // Make the faded preview match the exact puzzle slicing
-preview.style.backgroundSize = `${targetW}px ${targetH}px`;
-preview.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
-preview.style.backgroundRepeat = "no-repeat";
-
+      // ✅ Preview matches the puzzle exactly
+      preview.style.backgroundSize = `${targetW}px ${targetH}px`;
+      preview.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
+      preview.style.backgroundRepeat = "no-repeat";
 
       for(let i=0;i<L.pieces;i++){
         const col = i % L.cols;
@@ -650,12 +644,9 @@ preview.style.backgroundRepeat = "no-repeat";
         el.style.height = `${pieceSize}px`;
 
         el.style.backgroundImage = `url('${L.img}')`;
-
-        // IMPORTANT: use shared sizing so pieces align correctly
         el.style.backgroundSize = `${targetW}px ${targetH}px`;
         el.style.backgroundPosition = `${-(col * pieceSize)}px ${-(row * pieceSize)}px`;
 
-        el.dataset.i = String(i);
         el._correctX = correctX;
         el._correctY = correctY;
         el._w = pieceSize;
@@ -695,7 +686,7 @@ preview.style.backgroundRepeat = "no-repeat";
         originLeft = parseFloat(el.style.left || "0");
         originTop  = parseFloat(el.style.top  || "0");
 
-        el.style.zIndex = 9999;
+        el.style.zIndex = 50;
         el.style.transform = "translateZ(0) scale(1.02)";
       }
 
@@ -811,10 +802,14 @@ preview.style.backgroundRepeat = "no-repeat";
       showToast("Reset 💗");
     }
 
+    // ✅ Smooth level progression + clickable modal button (no issues)
     function onLevelComplete(){
       stopTimer();
       const timeTaken = startTime ? fmtTime(Date.now()-startTime) : "00:00";
       const isLast = levelIndex === LEVELS.length - 1;
+
+      // stop pieces from stealing clicks while modal is open
+      pieces.forEach(p => p.style.pointerEvents = "none");
 
       overlay.style.display = "grid";
       modalTitle.textContent = isLast ? "You did it, my love 💍❤️" : "Level Complete 💞";
@@ -822,27 +817,33 @@ preview.style.backgroundRepeat = "no-repeat";
         ? `You finished all 3 levels in ${timeTaken}. I love you. Now read the surprise below.`
         : `Completed in ${timeTaken}. Ready for the next memory?`;
 
+      // remove any previous final photo if present
       const existing = document.querySelector(".finalPhoto");
       if(existing) existing.remove();
+
+      // clear old handler
+      modalGo.onclick = null;
 
       if(isLast){
         const wrap = document.createElement("div");
         wrap.className = "finalPhoto";
-        wrap.innerHTML = `<img src="level3.jpg" alt="Final memory"/>`;
+        wrap.innerHTML = `<img src="${LEVELS[levelIndex].img}" alt="Final memory"/>`;
         document.getElementById("modal").appendChild(wrap);
 
         modalGo.textContent = "Open the Surprise 💖";
         modalGo.onclick = () => {
+          pieces.forEach(p => p.style.pointerEvents = "auto");
           overlay.style.display = "none";
           showFinalSurprise();
         };
       } else {
-        modalGo.textContent = `Start ${LEVELS[levelIndex+1].name}`;
+        modalGo.textContent = `Start ${LEVELS[levelIndex + 1].name}`;
         modalGo.onclick = () => {
+          pieces.forEach(p => p.style.pointerEvents = "auto");
           overlay.style.display = "none";
           levelIndex++;
           buildLevel(levelIndex);
-          startGameplay();
+          startGameplay(); // smooth like level 1
         };
       }
     }
@@ -885,7 +886,9 @@ preview.style.backgroundRepeat = "no-repeat";
     }
 
     // ---------- EVENTS ----------
-    modalGo.addEventListener("click", ()=> startGameplay());
+    // ✅ Single handler only (no conflicts)
+    modalGo.onclick = () => startGameplay();
+
     startBtn.addEventListener("click", ()=> startGameplay());
     shuffleBtn.addEventListener("click", ()=> shufflePieces());
     resetBtn.addEventListener("click", ()=> resetLevel());
@@ -914,6 +917,8 @@ preview.style.backgroundRepeat = "no-repeat";
   </script>
 </body>
 </html>
+
+
 
 
 
